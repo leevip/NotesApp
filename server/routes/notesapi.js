@@ -1,47 +1,47 @@
-const { ok } = require('assert');
-const e = require('express');
 var express = require('express');
 const { body } = require('express-validator');
 var router = express.Router();
-const fs = require('fs');
-const xml2js = require('xml2js');
+const Note = require('../models/Note');
+const {v4: uuidv4} = require('uuid');
 
-var notes;
-
-var parser = new xml2js.Parser();
-
-fs.readFile('./database/db.xml', 'utf-8', (err, data) => {
-    if(err) {
-        console.log(err);
-    } else {
-        console.log(data);
-        parser.parseString(data, (err, result) => {
-            if(err) {
-                console.log(err);
-            } else {
-                console.log("Data read");
-                console.dir(result);
-                notes = result;
-            }
-        })
-    }
-})
 
 router.get('/notes', function(req, res, next) {
     console.log('Get /notes');
-    console.log(notes)
-    if(!notes) {
-        res.json({message: 'No notes available'});
-    } else {
-        res.send({message: "Notes"});
-    }
+    Note.find({}, (err, notes) => {
+        if (err) {
+            res.json({error: "Database error"});
+        } else {
+            res.json(notes);
+        }
+    })
+});
+router.get('/notes/:topic', function(req, res, next) {
+    console.log('Get /notes');
+    Note.find({topic: req.params.topic}, (err, notes) => {
+        if (err) {
+            res.json({error: "Database error"});
+        }
+        res.json(notes);
+    })
 });
 
 router.post('/note', body("content").notEmpty(), body("topic").notEmpty(), function(req, res, next) {
     console.log('POST /note');
-    console.log(req.body.topic + "\n" + req.body.content);
-    res.json(req.body);
-})
+    Note.create({
+        note_id: uuidv4(),
+        topic: req.body.topic,
+        note_name: req.body.name,
+        content: req.body.content,
+        time: req.body.time
+    },
+    (err, ok) => {
+        if(err) {
+            res.json({error: "Error while creating note"});
+        } else {
+            return res.json(ok);
+        }
+    })
+});
 
 
 module.exports = router;
